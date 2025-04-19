@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MyTasksEFDbFirst.DTOs.Tasks.Request;
 using MyTasksEFDbFirst.Models;
+using MyTasksEFDbFirstNew.DTOs.Tasks.Response;
 using static MyTasksEFDbFirst.Helpers.Enums.MyTasksEnums;
 
 namespace MyTasksEFDbFirst.Controllers
@@ -15,7 +16,6 @@ namespace MyTasksEFDbFirst.Controllers
         {
             _testdbContext = testdbContext;
         }
-
         [HttpPost]
         [Route("add-task")]
         public async Task<IActionResult> Create([FromBody] CreateTaskInputDTO input)
@@ -23,7 +23,7 @@ namespace MyTasksEFDbFirst.Controllers
             var message = "0";
             try
             {
-                //check if user id exisit 
+                //chec   k if user id exisit 
                 if (!_testdbContext.Users.Any(x => x.Id == input.UserId))
                     throw new Exception("User Dose not Exisit");
                 //end date grater than start date 
@@ -48,7 +48,6 @@ namespace MyTasksEFDbFirst.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
-
         [HttpPut("update-task")]
         public async Task<IActionResult> Update([FromBody] UpdateTaskInputDTO input)
         {
@@ -96,6 +95,106 @@ namespace MyTasksEFDbFirst.Controllers
                     _testdbContext.SaveChanges();
                 }
                 throw new Exception($"No Task With The Given Id {input.Id}");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("get/{Id}")]
+        public async Task<IActionResult> Get([FromRoute] int Id)
+        {
+            try
+            {
+                var task = _testdbContext.Tasks.Where(x => x.Id == Id).SingleOrDefault();
+                if (task != null)
+                {
+                    return Ok(task);
+                }
+                return NoContent();
+            } catch (Exception ex) {
+                return StatusCode(500, ex.Message);
+            }
+            
+        }
+        [HttpGet("tasks")]
+        public async Task<IActionResult> ListAll()
+        {
+            try
+            {
+                var items = _testdbContext.Tasks.ToList();
+                var list = new List<TaskDTO>();
+                foreach (var item in items) {
+                    list.Add(new TaskDTO
+                    {
+                        Id= item.Id,
+                        Title = item.Title,
+                        DeadLine = item.End.ToString(),
+                        Status = item.Status
+                    });
+                }
+                return Ok(list);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        [HttpGet("tasks-select")]
+        public async Task<IActionResult> ListAll2()
+        {
+            try
+            {
+                var items = _testdbContext.Tasks.Select(x => new TaskDTO
+                {
+                    Id = x.Id,
+                    Title = x.Title,
+                    DeadLine = x.End.ToString(),
+                    Status = x.Status
+                }).ToList();
+
+                return Ok(items);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        [HttpGet("tasks-query")]
+        public async Task<IActionResult> ListAll3()
+        {
+            try
+            {
+                //select Id ,Ttile, Status,End As  DeadLine From Tasks 
+                var items = from t in _testdbContext.Tasks
+                            select new TaskDTO
+                            {
+                                Id = t.Id,
+                                Title = t.Title,
+                                DeadLine = t.End.ToString(),
+                                Status = t.Status
+                            };
+                return Ok(items.ToList());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        [HttpDelete("remove/{Id}")]
+        public async Task<IActionResult> Delete(int Id)
+        {
+            try
+            {
+                var task = _testdbContext.Tasks.Where(x => x.Id == Id).SingleOrDefault();
+                if (task != null)
+                {
+                    _testdbContext.Remove(task);
+                    _testdbContext.SaveChanges();
+                    return Ok("removed");
+                }
+                throw new Exception("No Task Exisit With The Selected Id");
             }
             catch (Exception ex)
             {
